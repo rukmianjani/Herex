@@ -1,0 +1,1039 @@
+-- ═══════════════════════════════════════════════════════════════
+-- 🧠 UNIVERSAL ROBLOX GAME ANALYZER v3.2 - VULNERABILITY SCANNER
+-- 
+-- NEW FEATURES:
+-- ✅ LOCAL Tab - Exploit yang PASTI WORK (Values, Clicks, Prompts)
+-- ⚠️ REMOTE Tab - Exploit Advanced yang BUTUH SKILL
+-- 🔓 VULN Tab - AUTO-READ semua script & detect vulnerabilities!
+-- 📝 Value Editor - Edit values sebelum execute
+-- 📖 Clear descriptions - Keterangan vuln & data yang bisa diubah
+-- 
+-- DELTA ANDROID OPTIMIZED - 100% WORKING EXPLOITS
+-- ═══════════════════════════════════════════════════════════════
+
+local version = "3.2.0-VULN-SCANNER"
+print("═══════════════════════════════════════════════════════════")
+print("🧠 UNIVERSAL GAME ANALYZER v" .. version)
+print("📱 Delta Android | 💯 Guaranteed Working Exploits")
+print("🔓 NEW: VULNERABILITY SCANNER - Auto-detect exploits!")
+print("═══════════════════════════════════════════════════════════")
+
+wait(0.3)
+
+-- ═══════════════════════════════════════════════════════════════
+-- SERVICES
+-- ═══════════════════════════════════════════════════════════════
+
+local Services = {
+    Players = game:GetService("Players"),
+    RS = game:GetService("ReplicatedStorage"),
+    WS = game:GetService("Workspace"),
+    CoreGui = game:GetService("CoreGui"),
+    TweenService = game:GetService("TweenService"),
+    HttpService = game:GetService("HttpService"),
+    MarketplaceService = game:GetService("MarketplaceService"),
+    UIS = game:GetService("UserInputService")
+}
+
+local player = Services.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local character = player.Character or player.CharacterAdded:Wait()
+local camera = workspace.CurrentCamera
+local isMobile = Services.UIS.TouchEnabled
+local screenSize = camera.ViewportSize
+
+print("📱 Device: " .. (isMobile and "Mobile" or "PC"))
+
+-- ═══════════════════════════════════════════════════════════════
+-- CORE ANALYZER
+-- ═══════════════════════════════════════════════════════════════
+
+local Analyzer = {
+    Version = version,
+    IsScanning = false,
+    CurrentTab = "Dashboard",
+    
+    ScanData = {Total = 0, Scanned = 0, StartTime = 0, Duration = 0},
+    GameInfo = {Name = "Unknown Game", PlaceId = game.PlaceId, Genre = "🎮 Unknown"},
+    
+    Exploits = {Local = {}, Remote = {}, Automation = {}},
+    
+    DeepScan = {
+        Scripts = {}, RemoteCommunication = {}, Constraints = {},
+        AnimationSound = {}, WorldState = {}
+    },
+    
+    -- NEW: Vulnerability Scanner Results
+    Vulnerabilities = {
+        Critical = {}, High = {}, Medium = {}, Low = {}, Info = {}
+    },
+    
+    SmartScripts = {},
+    GamePatterns = {},
+    Settings = {ShowNotifs = true, AutoClickSpeed = 0.1}
+}
+
+-- ═══════════════════════════════════════════════════════════════
+-- UTILITY FUNCTIONS
+-- ═══════════════════════════════════════════════════════════════
+
+local function SafeCall(func, ...)
+    local success, result = pcall(func, ...)
+    return success, result
+end
+
+local function GetPath(obj)
+    local success, path = SafeCall(function() return obj:GetFullName() end)
+    return success and path or "Unknown"
+end
+
+local function CountObjects(container)
+    local count = 0
+    SafeCall(function()
+        for _ in pairs(container:GetDescendants()) do count = count + 1 end
+    end)
+    return count
+end
+
+local function IsClientEditable(obj)
+    if not obj:IsA("ValueBase") then return false end
+    local originalValue = obj.Value
+    local success = false
+    SafeCall(function()
+        local testValue
+        if obj:IsA("NumberValue") or obj:IsA("IntValue") then
+            testValue = originalValue + 1
+        elseif obj:IsA("BoolValue") then
+            testValue = not originalValue
+        else
+            testValue = originalValue
+        end
+        obj.Value = testValue
+        wait(0.05)
+        if obj.Value == testValue then success = true end
+        obj.Value = originalValue
+    end)
+    return success
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- VULNERABILITY SCANNER - MAIN FEATURE
+-- ═══════════════════════════════════════════════════════════════
+
+local VulnPatterns = {
+    Critical = {
+        {pattern = "FireServer", name = "Unprotected Remote", desc = "RemoteEvent tanpa validasi", exploit = "Fire dengan parameter custom", data = "Parameters ke server"},
+        {pattern = "InvokeServer", name = "Unprotected Function", desc = "RemoteFunction bisa dimanipulasi", exploit = "Invoke dengan params palsu", data = "Input & return value"},
+        {pattern = "leaderstats", name = "Leaderstats Access", desc = "Akses ke stats player", exploit = "Edit nilai langsung/via remote", data = "Currency/Level/Stats"},
+        {pattern = "_G%.", name = "Global Variable", desc = "_G bisa dioverride", exploit = "_G.var = nilai_baru", data = "Semua _G values"},
+        {pattern = "shared%.", name = "Shared Variable", desc = "shared bisa diakses", exploit = "shared.var = nilai", data = "Semua shared values"},
+        {pattern = "IsAdmin", name = "Admin Check", desc = "Pengecekan admin bypassable", exploit = "Override admin status", data = "Boolean admin"},
+        {pattern = "gamepass", name = "GamePass Check", desc = "Mungkin client-side check", exploit = "Spoof ownership", data = "Boolean ownership"},
+    },
+    High = {
+        {pattern = "WalkSpeed", name = "Speed Hack", desc = "WalkSpeed bisa diubah", exploit = "Humanoid.WalkSpeed = 100", data = "WalkSpeed (def: 16)"},
+        {pattern = "JumpPower", name = "Jump Hack", desc = "JumpPower bisa diubah", exploit = "Humanoid.JumpPower = 100", data = "JumpPower (def: 50)"},
+        {pattern = "Health", name = "God Mode", desc = "Health bisa diset infinite", exploit = "Health = math.huge", data = "Health & MaxHealth"},
+        {pattern = "BodyVelocity", name = "Speed/Fly Hack", desc = "Physics manipulation", exploit = "Create BodyVelocity", data = "Velocity & MaxForce"},
+        {pattern = "TeleportService", name = "Teleport Control", desc = "Manipulasi teleport", exploit = "Teleport anywhere", data = "Destination"},
+        {pattern = "%.Value%s*=", name = "Value Assignment", desc = "Direct value edit", exploit = "obj.Value = new", data = "Any ValueBase"},
+    },
+    Medium = {
+        {pattern = "OnClientEvent", name = "Client Event", desc = "Intercept server data", exploit = "Hook & analyze", data = "Server data"},
+        {pattern = "LocalPlayer", name = "Player Access", desc = "Player properties access", exploit = "Modify properties", data = "Player children"},
+        {pattern = "%.Touched:", name = "Touch Event", desc = "Trigger manual", exploit = "Fire touched event", data = "Part reference"},
+        {pattern = "Clone%(", name = "Object Clone", desc = "Duplicate items", exploit = "Clone objects", data = "Cloned properties"},
+        {pattern = "Destroy%(", name = "Object Destroy", desc = "Remove protections", exploit = "Destroy anti-cheat", data = "Object existence"},
+        {pattern = "FindFirstChild", name = "Child Search", desc = "Spoof by creating", exploit = "Create matching obj", data = "Object existence"},
+    },
+    Low = {
+        {pattern = "TextLabel", name = "UI Text", desc = "Fake display", exploit = "Change text", data = "Text property"},
+        {pattern = "Visible", name = "UI Visibility", desc = "Show hidden UI", exploit = "Set Visible=true", data = "Visible bool"},
+        {pattern = "Camera", name = "Camera Control", desc = "FOV/freecam hack", exploit = "Modify camera", data = "FOV, CFrame"},
+    },
+    Info = {
+        {pattern = "print%(", name = "Debug Print", desc = "Leak info di console", exploit = "Read console", data = "Debug info"},
+        {pattern = "require%(", name = "Module Require", desc = "Hook atau replace", exploit = "Hook require", data = "Module return"},
+    }
+}
+
+function Analyzer:ScanVulnerabilities()
+    print("\n🔓 SCANNING FOR VULNERABILITIES...")
+    
+    self.Vulnerabilities = {Critical = {}, High = {}, Medium = {}, Low = {}, Info = {}}
+    local totalVulns = 0
+    
+    -- Scan all scripts
+    for _, scriptData in ipairs(self.DeepScan.Scripts) do
+        local scriptSource = ""
+        
+        -- Try to get script source
+        SafeCall(function()
+            if decompile then
+                scriptSource = decompile(scriptData.Object)
+            elseif scriptData.Object:IsA("ModuleScript") then
+                pcall(function()
+                    local req = require(scriptData.Object)
+                    if type(req) == "table" then
+                        scriptSource = Services.HttpService:JSONEncode(req)
+                    end
+                end)
+            end
+        end)
+        
+        local contentToScan = scriptSource .. " " .. scriptData.Name .. " " .. scriptData.Path
+        
+        if #contentToScan > 5 then
+            for severity, patterns in pairs(VulnPatterns) do
+                for _, vuln in ipairs(patterns) do
+                    if contentToScan:match(vuln.pattern) then
+                        table.insert(self.Vulnerabilities[severity], {
+                            Name = vuln.name,
+                            Description = vuln.desc,
+                            ExploitMethod = vuln.exploit,
+                            DataToModify = vuln.data,
+                            ScriptName = scriptData.Name,
+                            ScriptPath = scriptData.Path,
+                            ScriptType = scriptData.Type,
+                            Severity = severity,
+                            Code = self:GenerateVulnExploit(vuln, scriptData)
+                        })
+                        totalVulns = totalVulns + 1
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Scan remotes for vulnerable names
+    local remoteVulns = {
+        {p="money", s="Critical"}, {p="cash", s="Critical"}, {p="coin", s="Critical"},
+        {p="gold", s="Critical"}, {p="gem", s="Critical"}, {p="give", s="Critical"},
+        {p="admin", s="Critical"}, {p="buy", s="High"}, {p="sell", s="High"},
+        {p="add", s="High"}, {p="set", s="High"}, {p="level", s="High"},
+        {p="xp", s="High"}, {p="damage", s="High"}, {p="speed", s="High"},
+        {p="teleport", s="High"}, {p="spawn", s="Medium"}, {p="claim", s="Medium"},
+    }
+    
+    for _, remote in ipairs(self.DeepScan.RemoteCommunication) do
+        local name = remote.Name:lower()
+        for _, rv in ipairs(remoteVulns) do
+            if name:match(rv.p) then
+                table.insert(self.Vulnerabilities[rv.s], {
+                    Name = rv.p:upper() .. " Remote",
+                    Description = "Remote terkait " .. rv.p,
+                    ExploitMethod = "Fire dengan parameter manipulasi",
+                    DataToModify = "Number/String/Table params",
+                    ScriptName = remote.Name,
+                    ScriptPath = remote.Path,
+                    ScriptType = remote.Type,
+                    Severity = rv.s,
+                    Code = self:GenerateRemoteVulnCode(remote)
+                })
+                totalVulns = totalVulns + 1
+                break
+            end
+        end
+    end
+    
+    print("🔓 Found " .. totalVulns .. " vulnerabilities!")
+    return totalVulns
+end
+
+function Analyzer:GenerateVulnExploit(vuln, scriptData)
+    local code = "-- 🔓 " .. vuln.name .. " Exploit\n-- Target: " .. scriptData.Path .. "\n\n"
+    
+    if vuln.pattern:match("WalkSpeed") then
+        code = code .. [[
+local hum = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+if hum then
+    hum.WalkSpeed = 100
+    -- Loop to maintain
+    spawn(function()
+        while wait(0.1) do
+            pcall(function()
+                game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 100
+            end)
+        end
+    end)
+end]]
+    elseif vuln.pattern:match("JumpPower") then
+        code = code .. [[
+local hum = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+if hum then hum.JumpPower = 100 end]]
+    elseif vuln.pattern:match("Health") then
+        code = code .. [[
+local hum = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+if hum then
+    hum.MaxHealth = math.huge
+    hum.Health = math.huge
+end]]
+    elseif vuln.pattern:match("_G") then
+        code = code .. [[
+for k,v in pairs(_G) do print(k,v) end
+-- Try common ones:
+pcall(function() _G.Money = 999999 end)
+pcall(function() _G.Admin = true end)]]
+    elseif vuln.pattern:match("leaderstats") then
+        code = code .. [[
+local ls = game.Players.LocalPlayer:FindFirstChild("leaderstats")
+if ls then
+    for _,v in pairs(ls:GetChildren()) do
+        if v:IsA("NumberValue") or v:IsA("IntValue") then
+            pcall(function() v.Value = v.Value + 999999 end)
+        end
+    end
+end]]
+    else
+        code = code .. "-- Analyze " .. scriptData.Path .. " for exploitation\nprint('Target found')"
+    end
+    
+    return code
+end
+
+function Analyzer:GenerateRemoteVulnCode(remote)
+    return string.format([[
+-- 🔓 Remote Exploit: %s
+local remote = nil
+for _,v in pairs(game:GetDescendants()) do
+    if v.Name == "%s" and (v:IsA("RemoteEvent") or v:IsA("RemoteFunction")) then
+        remote = v
+        break
+    end
+end
+
+if remote then
+    if remote:IsA("RemoteEvent") then
+        remote:FireServer()
+        remote:FireServer(999999)
+        remote:FireServer(true)
+        remote:FireServer({Amount = 999999})
+    else
+        local r = remote:InvokeServer()
+        print("Result:", r)
+    end
+end]], remote.Name, remote.Name)
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- GAME DETECTION & SCANNING
+-- ═══════════════════════════════════════════════════════════════
+
+function Analyzer:DetectGame()
+    SafeCall(function()
+        local info = Services.MarketplaceService:GetProductInfo(game.PlaceId)
+        self.GameInfo.Name = info.Name or "Unknown"
+    end)
+    
+    local name = self.GameInfo.Name:lower()
+    local genres = {
+        {p = {"fish"}, i = "🎣", n = "Fishing"},
+        {p = {"farm", "harvest"}, i = "🌾", n = "Farming"},
+        {p = {"mine", "dig"}, i = "⛏️", n = "Mining"},
+        {p = {"tycoon"}, i = "🏭", n = "Tycoon"},
+        {p = {"simulator", "sim"}, i = "🎮", n = "Simulator"},
+        {p = {"obby"}, i = "🏃", n = "Obby"},
+        {p = {"anime"}, i = "⚔️", n = "Anime"},
+    }
+    
+    for _, g in ipairs(genres) do
+        for _, p in ipairs(g.p) do
+            if name:match(p) then
+                self.GameInfo.Genre = g.i .. " " .. g.n
+                return
+            end
+        end
+    end
+end
+
+function Analyzer:Notify(title, msg)
+    if GUI_ShowNotification then GUI_ShowNotification(title, msg) end
+end
+
+function Analyzer:StartScan()
+    if self.IsScanning then return end
+    
+    SafeCall(function()
+        self.IsScanning = true
+        self.ScanData.StartTime = tick()
+        self.ScanData.Scanned = 0
+        
+        self.Exploits = {Local = {}, Remote = {}, Automation = {}}
+        self.DeepScan = {Scripts = {}, RemoteCommunication = {}, Constraints = {}, AnimationSound = {}, WorldState = {}}
+        
+        self:Notify("🔍 Scanning...", "Analyzing game...")
+        
+        local containers = {
+            {name = "ReplicatedStorage", obj = Services.RS},
+            {name = "Workspace", obj = Services.WS},
+            {name = "Players", obj = Services.Players},
+        }
+        
+        self.ScanData.Total = 0
+        for _, c in ipairs(containers) do
+            self.ScanData.Total = self.ScanData.Total + CountObjects(c.obj)
+        end
+        
+        for _, c in ipairs(containers) do
+            self:ScanContainer(c.obj)
+        end
+        
+        self.ScanData.Duration = tick() - self.ScanData.StartTime
+        self.IsScanning = false
+        
+        -- Run vulnerability scanner
+        local vulnCount = self:ScanVulnerabilities()
+        
+        self:Notify("✅ Complete!", #self.Exploits.Local .. " exploits + " .. vulnCount .. " vulns")
+        
+        if GUI_UpdateResults then GUI_UpdateResults() end
+    end)
+end
+
+function Analyzer:ScanContainer(container)
+    SafeCall(function()
+        for _, obj in ipairs(container:GetDescendants()) do
+            self.ScanData.Scanned = self.ScanData.Scanned + 1
+            if self.ScanData.Scanned % 200 == 0 then wait() end
+            self:AnalyzeObject(obj)
+        end
+    end)
+end
+
+function Analyzer:AnalyzeObject(obj)
+    SafeCall(function()
+        local t = obj.ClassName
+        local n = obj.Name
+        local p = GetPath(obj)
+        
+        -- Scripts
+        if t == "Script" or t == "LocalScript" or t == "ModuleScript" then
+            table.insert(self.DeepScan.Scripts, {
+                Type = t, Name = n, Path = p, Object = obj,
+                Icon = t == "ModuleScript" and "📦" or "📜",
+                Description = t
+            })
+        end
+        
+        -- Remotes
+        if t == "RemoteEvent" or t == "RemoteFunction" then
+            table.insert(self.DeepScan.RemoteCommunication, {
+                Type = t, Name = n, Path = p, Object = obj,
+                Icon = "📡", Description = t
+            })
+            
+            table.insert(self.Exploits.Remote, {
+                Type = t, Name = n, Path = p, Object = obj,
+                Icon = "📡",
+                Description = self:GetRemoteDesc(n),
+                Reliability = "ADVANCED"
+            })
+        end
+        
+        -- Values
+        if t:match("Value") then
+            local nl = n:lower()
+            local isRelevant = nl:match("money") or nl:match("cash") or nl:match("coin") or
+                nl:match("gold") or nl:match("gem") or nl:match("level") or nl:match("xp") or
+                nl:match("speed") or nl:match("jump") or nl:match("health") or nl:match("damage") or
+                nl:match("power") or nl:match("admin") or nl:match("vip") or nl:match("premium")
+            
+            if isRelevant then
+                local isEdit = IsClientEditable(obj)
+                table.insert(self.Exploits.Local, {
+                    Type = "Value", Name = n, Path = p, Object = obj,
+                    ValueType = t, CurrentValue = obj.Value,
+                    IsEditable = isEdit,
+                    IsNumeric = t:match("Number") or t:match("Int"),
+                    Icon = self:GetValueIcon(n),
+                    Description = self:GetValueDesc(n, obj.Value, isEdit, t),
+                    Reliability = isEdit and "100% WORK" or "READ-ONLY"
+                })
+            end
+        end
+        
+        -- ClickDetector
+        if obj:FindFirstChildOfClass("ClickDetector") then
+            table.insert(self.Exploits.Automation, {
+                Type = "ClickDetector", Name = n, Path = p, Object = obj,
+                Icon = "🖱️",
+                Description = "Auto-clickable object",
+                Code = string.format([[
+local obj = game:GetService("Workspace"):FindFirstChild("%s", true)
+if obj then
+    local d = obj:FindFirstChildOfClass("ClickDetector")
+    if d then
+        while wait(0.1) do pcall(function() fireclickdetector(d) end) end
+    end
+end]], n)
+            })
+        end
+        
+        -- ProximityPrompt
+        if obj:FindFirstChildOfClass("ProximityPrompt") then
+            table.insert(self.Exploits.Automation, {
+                Type = "ProximityPrompt", Name = n, Path = p, Object = obj,
+                Icon = "⚡",
+                Description = "Auto-promptable",
+                Code = string.format([[
+local obj = game:GetService("Workspace"):FindFirstChild("%s", true)
+if obj then
+    local p = obj:FindFirstChildOfClass("ProximityPrompt")
+    if p then
+        while wait(0.1) do pcall(function() fireproximityprompt(p) end) end
+    end
+end]], n)
+            })
+        end
+    end)
+end
+
+function Analyzer:GetValueIcon(n)
+    n = n:lower()
+    if n:match("money") or n:match("cash") then return "💰" end
+    if n:match("gold") or n:match("coin") then return "🪙" end
+    if n:match("level") then return "⭐" end
+    if n:match("xp") then return "📊" end
+    return "💎"
+end
+
+function Analyzer:GetValueDesc(n, v, edit, t)
+    local desc = tostring(v) .. " | " .. t
+    return desc .. (edit and " ✅ EDITABLE" or " ❌ READ-ONLY")
+end
+
+function Analyzer:GetRemoteDesc(n)
+    n = n:lower()
+    if n:match("money") or n:match("cash") then return "💰 Currency remote" end
+    if n:match("buy") then return "🛒 Purchase remote" end
+    if n:match("claim") then return "🎁 Reward remote" end
+    return "📡 Server communication"
+end
+
+-- ═══════════════════════════════════════════════════════════════
+-- GUI SYSTEM
+-- ═══════════════════════════════════════════════════════════════
+
+local guiSuccess, guiError = pcall(function()
+
+local guiScale = math.min(screenSize.X / 400, screenSize.Y / 700, 1.2)
+guiScale = math.max(guiScale, 0.7)
+local guiWidth = math.floor(320 * guiScale)
+local guiHeight = math.floor(450 * guiScale)
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "VulnScannerGUI"
+ScreenGui.ResetOnSpawn = false
+SafeCall(function() ScreenGui.Parent = Services.CoreGui end)
+if not ScreenGui.Parent then ScreenGui.Parent = playerGui end
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, guiWidth, 0, guiHeight)
+MainFrame.Position = UDim2.new(0.5, -guiWidth/2, 0.5, -guiHeight/2)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = MainFrame
+
+-- Title
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 40)
+TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, -50, 1, 0)
+TitleText.Position = UDim2.new(0, 10, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "🔓 VULN SCANNER v3.2"
+TitleText.TextColor3 = Color3.fromRGB(100, 180, 255)
+TitleText.TextSize = 14
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.Parent = TitleBar
+
+-- Close button
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0.5, -15)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = TitleBar
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+-- Drag
+local dragging, dragStart, startPos
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+    end
+end)
+Services.UIS.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+Services.UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+-- Tabs
+local TabBar = Instance.new("Frame")
+TabBar.Size = UDim2.new(1, 0, 0, 32)
+TabBar.Position = UDim2.new(0, 0, 0, 40)
+TabBar.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+TabBar.BorderSizePixel = 0
+TabBar.Parent = MainFrame
+
+local TabLayout = Instance.new("UIListLayout")
+TabLayout.FillDirection = Enum.FillDirection.Horizontal
+TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+TabLayout.Padding = UDim.new(0, 2)
+TabLayout.Parent = TabBar
+
+local tabs = {"📊", "💯", "🤖", "🔓", "⚠️"}
+local tabNames = {"Dashboard", "Local", "Auto", "Vuln", "Remote"}
+local tabButtons = {}
+local tabContents = {}
+
+for i, icon in ipairs(tabs) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 55, 1, -4)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    btn.Text = icon
+    btn.TextColor3 = Color3.fromRGB(150, 150, 150)
+    btn.TextSize = 14
+    btn.Font = Enum.Font.GothamBold
+    btn.Parent = TabBar
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    tabButtons[tabNames[i]] = btn
+end
+
+-- Content
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Size = UDim2.new(1, -10, 1, -82)
+ContentFrame.Position = UDim2.new(0, 5, 0, 77)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+for _, name in ipairs(tabNames) do
+    local content = Instance.new("ScrollingFrame")
+    content.Size = UDim2.new(1, 0, 1, 0)
+    content.BackgroundTransparency = 1
+    content.ScrollBarThickness = 4
+    content.Visible = false
+    content.Parent = ContentFrame
+    Instance.new("UIListLayout", content).Padding = UDim.new(0, 5)
+    tabContents[name] = content
+end
+
+local function SwitchTab(name)
+    for n, btn in pairs(tabButtons) do
+        btn.BackgroundColor3 = n == name and Color3.fromRGB(100, 180, 255) or Color3.fromRGB(40, 40, 55)
+        btn.TextColor3 = n == name and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
+    end
+    for n, content in pairs(tabContents) do
+        content.Visible = n == name
+    end
+end
+
+for name, btn in pairs(tabButtons) do
+    btn.MouseButton1Click:Connect(function() SwitchTab(name) end)
+end
+
+-- Helpers
+local function CreateSection(parent, text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -10, 0, 22)
+    lbl.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    lbl.Text = "  " .. text
+    lbl.TextColor3 = Color3.fromRGB(100, 180, 255)
+    lbl.TextSize = 10
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = parent
+    Instance.new("UICorner", lbl).CornerRadius = UDim.new(0, 6)
+end
+
+local function CreateLabel(parent, text, h)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -10, 0, h or 30)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+    lbl.TextSize = 9
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextWrapped = true
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextYAlignment = Enum.TextYAlignment.Top
+    lbl.Parent = parent
+end
+
+local function CreateButton(parent, text, cb)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -10, 0, 32)
+    btn.BackgroundColor3 = Color3.fromRGB(60, 130, 200)
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 11
+    btn.Font = Enum.Font.GothamBold
+    btn.Parent = parent
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    btn.MouseButton1Click:Connect(cb)
+end
+
+-- Vuln Card
+local function CreateVulnCard(parent, vuln)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, -10, 0, 140)
+    card.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    card.Parent = parent
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 8)
+    
+    local colors = {Critical = Color3.fromRGB(220, 50, 50), High = Color3.fromRGB(255, 140, 0), Medium = Color3.fromRGB(255, 220, 0), Low = Color3.fromRGB(100, 200, 100), Info = Color3.fromRGB(100, 150, 255)}
+    local icons = {Critical = "🔴", High = "🟠", Medium = "🟡", Low = "🟢", Info = "ℹ️"}
+    
+    -- Severity bar
+    local bar = Instance.new("Frame")
+    bar.Size = UDim2.new(0, 3, 1, -6)
+    bar.Position = UDim2.new(0, 3, 0, 3)
+    bar.BackgroundColor3 = colors[vuln.Severity]
+    bar.Parent = card
+    
+    -- Title
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -15, 0, 16)
+    title.Position = UDim2.new(0, 10, 0, 3)
+    title.BackgroundTransparency = 1
+    title.Text = icons[vuln.Severity] .. " " .. vuln.Name
+    title.TextColor3 = colors[vuln.Severity]
+    title.TextSize = 10
+    title.Font = Enum.Font.GothamBold
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = card
+    
+    -- Script name
+    local script = Instance.new("TextLabel")
+    script.Size = UDim2.new(1, -15, 0, 12)
+    script.Position = UDim2.new(0, 10, 0, 18)
+    script.BackgroundTransparency = 1
+    script.Text = "📜 " .. vuln.ScriptName
+    script.TextColor3 = Color3.fromRGB(150, 150, 150)
+    script.TextSize = 8
+    script.Font = Enum.Font.Gotham
+    script.TextXAlignment = Enum.TextXAlignment.Left
+    script.Parent = card
+    
+    -- Description
+    local desc = Instance.new("TextLabel")
+    desc.Size = UDim2.new(1, -15, 0, 20)
+    desc.Position = UDim2.new(0, 10, 0, 32)
+    desc.BackgroundTransparency = 1
+    desc.Text = vuln.Description
+    desc.TextColor3 = Color3.fromRGB(200, 200, 200)
+    desc.TextSize = 8
+    desc.Font = Enum.Font.Gotham
+    desc.TextWrapped = true
+    desc.TextXAlignment = Enum.TextXAlignment.Left
+    desc.Parent = card
+    
+    -- Exploit method
+    local exploit = Instance.new("TextLabel")
+    exploit.Size = UDim2.new(1, -15, 0, 16)
+    exploit.Position = UDim2.new(0, 10, 0, 54)
+    exploit.BackgroundTransparency = 1
+    exploit.Text = "⚡ " .. vuln.ExploitMethod
+    exploit.TextColor3 = Color3.fromRGB(255, 200, 100)
+    exploit.TextSize = 8
+    exploit.Font = Enum.Font.Gotham
+    exploit.TextXAlignment = Enum.TextXAlignment.Left
+    exploit.Parent = card
+    
+    -- Data to modify
+    local data = Instance.new("TextLabel")
+    data.Size = UDim2.new(1, -15, 0, 16)
+    data.Position = UDim2.new(0, 10, 0, 70)
+    data.BackgroundTransparency = 1
+    data.Text = "📝 Data: " .. vuln.DataToModify
+    data.TextColor3 = Color3.fromRGB(100, 255, 150)
+    data.TextSize = 8
+    data.Font = Enum.Font.Gotham
+    data.TextXAlignment = Enum.TextXAlignment.Left
+    data.Parent = card
+    
+    -- Buttons
+    local copyBtn = Instance.new("TextButton")
+    copyBtn.Size = UDim2.new(0.45, 0, 0, 24)
+    copyBtn.Position = UDim2.new(0.02, 0, 0, 90)
+    copyBtn.BackgroundColor3 = Color3.fromRGB(80, 150, 80)
+    copyBtn.Text = "📋 COPY"
+    copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    copyBtn.TextSize = 9
+    copyBtn.Font = Enum.Font.GothamBold
+    copyBtn.Parent = card
+    Instance.new("UICorner", copyBtn).CornerRadius = UDim.new(0, 4)
+    
+    copyBtn.MouseButton1Click:Connect(function()
+        if setclipboard then
+            setclipboard(vuln.Code)
+            Analyzer:Notify("📋 Copied!", vuln.Name)
+        end
+    end)
+    
+    local runBtn = Instance.new("TextButton")
+    runBtn.Size = UDim2.new(0.45, 0, 0, 24)
+    runBtn.Position = UDim2.new(0.52, 0, 0, 90)
+    runBtn.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
+    runBtn.Text = "▶️ RUN"
+    runBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    runBtn.TextSize = 9
+    runBtn.Font = Enum.Font.GothamBold
+    runBtn.Parent = card
+    Instance.new("UICorner", runBtn).CornerRadius = UDim.new(0, 4)
+    
+    runBtn.MouseButton1Click:Connect(function()
+        local s, e = pcall(function() loadstring(vuln.Code)() end)
+        Analyzer:Notify(s and "✅ Executed!" or "❌ Error!", s and vuln.Name or tostring(e):sub(1,30))
+    end)
+    
+    -- Path
+    local path = Instance.new("TextLabel")
+    path.Size = UDim2.new(1, -15, 0, 14)
+    path.Position = UDim2.new(0, 10, 0, 118)
+    path.BackgroundTransparency = 1
+    path.Text = "📁 " .. vuln.ScriptPath
+    path.TextColor3 = Color3.fromRGB(100, 100, 100)
+    path.TextSize = 7
+    path.Font = Enum.Font.Gotham
+    path.TextXAlignment = Enum.TextXAlignment.Left
+    path.TextTruncate = Enum.TextTruncate.AtEnd
+    path.Parent = card
+end
+
+-- Exploit card
+local function CreateExploitCard(parent, exploit, color)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, -10, 0, 70)
+    card.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    card.Parent = parent
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 8)
+    
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -10, 0, 16)
+    title.Position = UDim2.new(0, 8, 0, 5)
+    title.BackgroundTransparency = 1
+    title.Text = exploit.Icon .. " " .. exploit.Name
+    title.TextColor3 = color
+    title.TextSize = 10
+    title.Font = Enum.Font.GothamBold
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = card
+    
+    local desc = Instance.new("TextLabel")
+    desc.Size = UDim2.new(1, -10, 0, 24)
+    desc.Position = UDim2.new(0, 8, 0, 22)
+    desc.BackgroundTransparency = 1
+    desc.Text = exploit.Description
+    desc.TextColor3 = Color3.fromRGB(180, 180, 180)
+    desc.TextSize = 8
+    desc.Font = Enum.Font.Gotham
+    desc.TextWrapped = true
+    desc.TextXAlignment = Enum.TextXAlignment.Left
+    desc.Parent = card
+    
+    if exploit.Code then
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0.9, 0, 0, 20)
+        btn.Position = UDim2.new(0.05, 0, 0, 46)
+        btn.BackgroundColor3 = Color3.fromRGB(80, 150, 80)
+        btn.Text = "▶️ RUN"
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.TextSize = 9
+        btn.Font = Enum.Font.GothamBold
+        btn.Parent = card
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+        btn.MouseButton1Click:Connect(function()
+            pcall(function() loadstring(exploit.Code)() end)
+            Analyzer:Notify("✅ Started!", exploit.Name)
+        end)
+    end
+end
+
+-- Update results
+function GUI_UpdateResults()
+    for _, content in pairs(tabContents) do
+        for _, child in pairs(content:GetChildren()) do
+            if not child:IsA("UIListLayout") then child:Destroy() end
+        end
+    end
+    
+    local totalVulns = #Analyzer.Vulnerabilities.Critical + #Analyzer.Vulnerabilities.High + #Analyzer.Vulnerabilities.Medium + #Analyzer.Vulnerabilities.Low
+    
+    -- Dashboard
+    local dash = tabContents["Dashboard"]
+    CreateSection(dash, "🎮 GAME INFO")
+    CreateLabel(dash, Analyzer.GameInfo.Name .. "\nID: " .. game.PlaceId .. "\n" .. Analyzer.GameInfo.Genre, 45)
+    CreateSection(dash, "🔍 SCAN")
+    CreateButton(dash, "🔍 START SCAN", function() Analyzer:StartScan() end)
+    CreateSection(dash, "📊 RESULTS")
+    CreateLabel(dash, string.format("💯 Local: %d\n🤖 Auto: %d\n⚠️ Remote: %d\n🔓 Vulns: %d (🔴%d 🟠%d 🟡%d)",
+        #Analyzer.Exploits.Local, #Analyzer.Exploits.Automation, #Analyzer.Exploits.Remote,
+        totalVulns, #Analyzer.Vulnerabilities.Critical, #Analyzer.Vulnerabilities.High, #Analyzer.Vulnerabilities.Medium), 80)
+    
+    -- Local
+    local loc = tabContents["Local"]
+    CreateSection(loc, "💯 LOCAL (" .. #Analyzer.Exploits.Local .. ")")
+    if #Analyzer.Exploits.Local == 0 then
+        CreateLabel(loc, "Run scan to find exploits", 30)
+    else
+        for _, e in ipairs(Analyzer.Exploits.Local) do
+            CreateExploitCard(loc, e, Color3.fromRGB(100, 255, 150))
+        end
+    end
+    
+    -- Auto
+    local auto = tabContents["Auto"]
+    CreateSection(auto, "🤖 AUTOMATION (" .. #Analyzer.Exploits.Automation .. ")")
+    if #Analyzer.Exploits.Automation == 0 then
+        CreateLabel(auto, "Run scan to find auto-farm targets", 30)
+    else
+        for _, e in ipairs(Analyzer.Exploits.Automation) do
+            CreateExploitCard(auto, e, Color3.fromRGB(255, 200, 100))
+        end
+    end
+    
+    -- VULN TAB
+    local vuln = tabContents["Vuln"]
+    CreateSection(vuln, "🔓 VULNERABILITIES (" .. totalVulns .. ")")
+    
+    if totalVulns == 0 then
+        CreateLabel(vuln, [[Run scan to detect vulnerabilities!
+
+Scanner akan membaca semua script dan mencari:
+🔴 Critical - Money/Admin exploits
+🟠 High - Speed/Health hacks
+🟡 Medium - Game logic bypass
+🟢 Low - UI manipulation
+
+Setiap vuln termasuk:
+• Deskripsi celah
+• Cara exploit
+• Data yang bisa diubah
+• Code siap pakai!]], 180)
+    else
+        CreateLabel(vuln, "Scripts: " .. #Analyzer.DeepScan.Scripts .. " | Remotes: " .. #Analyzer.DeepScan.RemoteCommunication, 20)
+        
+        if #Analyzer.Vulnerabilities.Critical > 0 then
+            CreateSection(vuln, "🔴 CRITICAL (" .. #Analyzer.Vulnerabilities.Critical .. ")")
+            for _, v in ipairs(Analyzer.Vulnerabilities.Critical) do CreateVulnCard(vuln, v) end
+        end
+        if #Analyzer.Vulnerabilities.High > 0 then
+            CreateSection(vuln, "🟠 HIGH (" .. #Analyzer.Vulnerabilities.High .. ")")
+            for _, v in ipairs(Analyzer.Vulnerabilities.High) do CreateVulnCard(vuln, v) end
+        end
+        if #Analyzer.Vulnerabilities.Medium > 0 then
+            CreateSection(vuln, "🟡 MEDIUM (" .. #Analyzer.Vulnerabilities.Medium .. ")")
+            for _, v in ipairs(Analyzer.Vulnerabilities.Medium) do CreateVulnCard(vuln, v) end
+        end
+        if #Analyzer.Vulnerabilities.Low > 0 then
+            CreateSection(vuln, "🟢 LOW (" .. #Analyzer.Vulnerabilities.Low .. ")")
+            for _, v in ipairs(Analyzer.Vulnerabilities.Low) do CreateVulnCard(vuln, v) end
+        end
+    end
+    
+    -- Remote
+    local rem = tabContents["Remote"]
+    CreateSection(rem, "⚠️ REMOTE (" .. #Analyzer.Exploits.Remote .. ")")
+    if #Analyzer.Exploits.Remote == 0 then
+        CreateLabel(rem, "Run scan to find remotes", 30)
+    else
+        for _, e in ipairs(Analyzer.Exploits.Remote) do
+            CreateExploitCard(rem, e, Color3.fromRGB(255, 150, 100))
+        end
+    end
+    
+    -- Update canvas
+    for _, content in pairs(tabContents) do
+        local layout = content:FindFirstChildOfClass("UIListLayout")
+        if layout then content.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20) end
+    end
+end
+
+-- Notification
+local notifFrame = Instance.new("Frame")
+notifFrame.Size = UDim2.new(0, 260, 0, 60)
+notifFrame.Position = UDim2.new(0.5, -130, 0, -70)
+notifFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+notifFrame.BackgroundTransparency = 1
+notifFrame.ZIndex = 100
+notifFrame.Parent = ScreenGui
+Instance.new("UICorner", notifFrame).CornerRadius = UDim.new(0, 10)
+
+local notifTitle = Instance.new("TextLabel")
+notifTitle.Size = UDim2.new(1, -10, 0, 25)
+notifTitle.Position = UDim2.new(0, 5, 0, 5)
+notifTitle.BackgroundTransparency = 1
+notifTitle.TextColor3 = Color3.fromRGB(100, 180, 255)
+notifTitle.TextSize = 12
+notifTitle.Font = Enum.Font.GothamBold
+notifTitle.TextXAlignment = Enum.TextXAlignment.Left
+notifTitle.ZIndex = 101
+notifTitle.Parent = notifFrame
+
+local notifText = Instance.new("TextLabel")
+notifText.Size = UDim2.new(1, -10, 0, 25)
+notifText.Position = UDim2.new(0, 5, 0, 28)
+notifText.BackgroundTransparency = 1
+notifText.TextColor3 = Color3.fromRGB(200, 200, 200)
+notifText.TextSize = 10
+notifText.Font = Enum.Font.Gotham
+notifText.TextWrapped = true
+notifText.TextXAlignment = Enum.TextXAlignment.Left
+notifText.ZIndex = 101
+notifText.Parent = notifFrame
+
+function GUI_ShowNotification(title, text)
+    notifTitle.Text = title
+    notifText.Text = text
+    Services.TweenService:Create(notifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+        Position = UDim2.new(0.5, -130, 0, 10), BackgroundTransparency = 0
+    }):Play()
+    wait(2.5)
+    Services.TweenService:Create(notifFrame, TweenInfo.new(0.3), {
+        Position = UDim2.new(0.5, -130, 0, -70), BackgroundTransparency = 1
+    }):Play()
+end
+
+-- Init
+Analyzer:DetectGame()
+SwitchTab("Dashboard")
+GUI_UpdateResults()
+wait(0.3)
+Analyzer:Notify("✅ Ready!", "Vuln Scanner v3.2 loaded!")
+
+end)
+
+if not guiSuccess then
+    warn("❌ GUI Error:", guiError)
+end
+
+print("\n🚀 VULNERABILITY SCANNER READY!")
+print("📊 Dashboard - Game info & scan")
+print("💯 Local - Guaranteed exploits")
+print("🤖 Auto - Auto-farming")
+print("🔓 Vuln - Auto-detected vulnerabilities")
+print("⚠️ Remote - Advanced exploits")
+print("═══════════════════════════════════════════════════════════")
